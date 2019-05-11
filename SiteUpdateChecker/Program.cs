@@ -11,7 +11,11 @@ namespace SiteUpdateChecker
     {
         static async System.Threading.Tasks.Task Main(string[] args)
         {
-            string pushWhenNoChange = args?[0];
+            string pushWhenNoChange = "0";
+            if (args != null)
+            {
+                pushWhenNoChange = args?[0];
+            }
 
             using(var context = new ToolsContext())
             {
