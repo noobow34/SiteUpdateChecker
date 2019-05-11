@@ -52,7 +52,7 @@ namespace SiteUpdateChecker
                         if (updated)
                         {
                             Console.WriteLine("通知実施");
-                            string notifyString = $"【更新通知】\n{cs.SiteName}\n{cs.LastUpdate?.ToString("yyyy/MM/dd HH:mm:ss")}";
+                            string notifyString = $"【更新通知】\n{cs.SiteName}\n{cs.LastUpdate?.ToString("yyyy/MM/dd HH:mm:ss")}\n{cs.Url}";
                             LineUtil.PushMe(notifyString, httpClient);
                         }else if (pushWhenNoChange == "1")
                         {
