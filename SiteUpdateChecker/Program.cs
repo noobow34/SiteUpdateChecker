@@ -24,33 +24,59 @@ namespace SiteUpdateChecker
                     var csList = context.CheckSites;
                     foreach(var cs in csList)
                     {
-                        HttpResponseMessage response;
                         bool updated = false;
-                        response = await httpClient.GetAsync(cs.Url);
+                        var response = await httpClient.GetAsync(cs.Url,HttpCompletionOption.ResponseHeadersRead);
+                        string identifier = null;
+                        cs.LastCheck = DateTime.Now;
 
                         Console.WriteLine(cs.SiteName);
 
-                        //タイプごとにチェック
-                        switch (cs.CheckType)
+                        if(response.StatusCode != System.Net.HttpStatusCode.NotModified)
                         {
-                            case CheckType.E_TAG:
-                                Console.Write("ETag:");
-                                var etag = response.Headers.GetValues("ETag").ToArray()?[0];
-                                Console.WriteLine(etag);
-                                Console.WriteLine($"前回値:{cs.CheckIdentifier}");
-                                if(etag != cs.CheckIdentifier || cs.CheckIdentifier == null)
+                            try
+                            {
+                                //タイプごとにチェック
+                                switch (cs.CheckType)
                                 {
-                                    updated = true;
-                                    cs.LastUpdate = DateTime.Now;
-                                    cs.CheckIdentifier = etag;
+                                    case CheckType.E_TAG:
+                                        Console.Write("ETag:");
+                                        identifier = response.Headers.GetValues("ETag").ToArray()?[0];
+                                        Console.WriteLine(identifier);
+                                        Console.WriteLine($"前回値:{cs.CheckIdentifier}");
+                                        if (identifier != cs.CheckIdentifier || cs.CheckIdentifier == null)
+                                        {
+                                            updated = true;
+                                            cs.LastUpdate = DateTime.Now;
+                                        }
+                                        break;
+
+                                    case CheckType.LAST_MODIFIED:
+                                        Console.Write("Last-Modified:");
+                                        Console.WriteLine(response.Content.Headers.LastModified?.LocalDateTime.ToString("yyyy/MM/dd HH:mm:ss"));
+                                        Console.WriteLine($"前回値:{cs.LastUpdate?.ToString("yyyy/MM/dd HH:mm:ss")}");
+                                        if (cs.LastUpdate != response.Content.Headers.LastModified || cs.LastUpdate == null)
+                                        {
+                                            updated = true;
+                                            cs.LastUpdate = response.Content.Headers.LastModified?.LocalDateTime;
+                                        }
+                                        break;
                                 }
-                                cs.LastCheck = DateTime.Now;
-                                break;
+                            }
+                            catch(Exception ex)
+                            {
+                                LineUtil.PushMe($"【確認エラー】\n{cs.SiteName}\n{ex.Message}",httpClient);
+                            }
                         }
+                        else
+                        {
+                            Console.WriteLine("Status304");
+                        }
+
 
                         //通知
                         if (updated)
                         {
+                            cs.CheckIdentifier = identifier;
                             Console.WriteLine("通知実施");
                             string notifyString = $"【更新通知】\n{cs.SiteName}\n{cs.LastUpdate?.ToString("yyyy/MM/dd HH:mm:ss")}\n{cs.Url}";
                             LineUtil.PushMe(notifyString, httpClient);
