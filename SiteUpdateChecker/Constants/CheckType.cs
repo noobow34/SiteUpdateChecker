@@ -8,5 +8,6 @@ namespace SiteUpdateChecker.Constants
     {
         public const string E_TAG = "1";
         public const string LAST_MODIFIED = "2";
+        public const string HTML_HASH = "3";
     }
 }

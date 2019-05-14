@@ -1,9 +1,11 @@
-﻿using Noobow.Commons.Utils;
+﻿using Force.Crc32;
+using Noobow.Commons.Utils;
 using SiteUpdateChecker.Constants;
 using SiteUpdateChecker.EF;
 using System;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
 
 namespace SiteUpdateChecker
 {
@@ -58,6 +60,21 @@ namespace SiteUpdateChecker
                                         {
                                             updated = true;
                                             cs.LastUpdate = response.Content.Headers.LastModified?.LocalDateTime;
+                                        }
+                                        break;
+
+                                    case CheckType.HTML_HASH:
+                                        string html = await response.Content.ReadAsStringAsync();
+                                        byte[] bytes = new UTF8Encoding().GetBytes(html);
+                                        uint crc32 = Crc32CAlgorithm.Compute(bytes);
+                                        identifier = Convert.ToString(crc32, 16);
+                                        Console.Write("HtmlHash:");
+                                        Console.WriteLine(identifier);
+                                        Console.WriteLine($"前回値:{cs.CheckIdentifier}");
+                                        if (identifier != cs.CheckIdentifier || cs.CheckIdentifier == null)
+                                        {
+                                            updated = true;
+                                            cs.LastUpdate = DateTime.Now;
                                         }
                                         break;
                                 }
