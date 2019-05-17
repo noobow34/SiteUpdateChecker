@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SiteUpdateChecker.Constants;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -21,7 +22,7 @@ namespace SiteUpdateChecker.EF
         public string SiteName { get; set; }
 
         [Column("CHECK_TYPE")]
-        public string CheckType { get; set; }
+        public CheckTypeEnum? CheckType { get; set; }
 
         [Column("CHECK_IDENTIFIER")]
         public string CheckIdentifier { get; set; }

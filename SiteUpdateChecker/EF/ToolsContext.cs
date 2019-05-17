@@ -3,10 +3,12 @@ using System;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using System.IO;
+using EnumStringValues;
+using SiteUpdateChecker.Constants;
 
 namespace SiteUpdateChecker.EF
 {
-    public class ToolsContext:DbContext
+    public class ToolsContext : DbContext
     {
 
         public virtual DbSet<CheckSite> CheckSites { get; set; }
@@ -21,6 +23,13 @@ namespace SiteUpdateChecker.EF
                         mySqlOptions.ServerVersion(new Version(10, 3), ServerType.MariaDb);
                     }
             );
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<CheckSite>()
+               .Property(c => c.CheckType)
+               .HasConversion(v => v.GetStringValue(), v => ((string)v).ParseToEnum<CheckTypeEnum>());
         }
 
     }

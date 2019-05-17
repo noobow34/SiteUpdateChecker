@@ -40,7 +40,7 @@ namespace SiteUpdateChecker
                                 //タイプごとにチェック
                                 switch (cs.CheckType)
                                 {
-                                    case CheckType.E_TAG:
+                                    case CheckTypeEnum.ETag:
                                         Console.Write("ETag:");
                                         identifier = response.Headers.GetValues("ETag").ToArray()?[0];
                                         Console.WriteLine(identifier);
@@ -52,7 +52,7 @@ namespace SiteUpdateChecker
                                         }
                                         break;
 
-                                    case CheckType.LAST_MODIFIED:
+                                    case CheckTypeEnum.LastModified:
                                         Console.Write("Last-Modified:");
                                         Console.WriteLine(response.Content.Headers.LastModified?.LocalDateTime.ToString("yyyy/MM/dd HH:mm:ss"));
                                         Console.WriteLine($"前回値:{cs.LastUpdate?.ToString("yyyy/MM/dd HH:mm:ss")}");
@@ -63,7 +63,7 @@ namespace SiteUpdateChecker
                                         }
                                         break;
 
-                                    case CheckType.HTML_HASH:
+                                    case CheckTypeEnum.HtmlHash:
                                         string html = await response.Content.ReadAsStringAsync();
                                         byte[] bytes = new UTF8Encoding().GetBytes(html);
                                         uint crc32 = Crc32CAlgorithm.Compute(bytes);
