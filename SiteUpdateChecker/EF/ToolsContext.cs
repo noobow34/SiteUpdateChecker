@@ -13,7 +13,7 @@ namespace SiteUpdateChecker.EF
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            var config = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json").Build();
+            var config = new ConfigurationBuilder().SetBasePath(System.AppDomain.CurrentDomain.BaseDirectory).AddJsonFile("appsettings.json").Build();
             var connectionString = config.GetConnectionString("DefaultConnection");
             optionsBuilder.UseMySql(connectionString,
                     mySqlOptions =>
