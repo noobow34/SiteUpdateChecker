@@ -1,11 +1,12 @@
 ﻿using Force.Crc32;
 using Noobow.Commons.Utils;
 using SiteUpdateChecker.Constants;
-using SiteUpdateChecker.EF;
+using Noobow.Commons.EF;
 using System;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 
 namespace SiteUpdateChecker
 {
@@ -19,7 +20,8 @@ namespace SiteUpdateChecker
                 pushWhenNoChange = args[0];
             }
 
-            using(var context = new ToolsContext())
+            var optionsBuilder = new DbContextOptionsBuilder<ToolsContext>();
+            using (var context = new ToolsContext(optionsBuilder.Options))
             {
                 using (var httpClient = new HttpClient())
                 {
