@@ -120,11 +120,14 @@ namespace SiteUpdateChecker
                 Console.WriteLine("Status304");
             }
 
+            int count = 0;
+            Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(cs));
             using (var context = new ToolsContext(optionsBuilder.Options))
             {
                 context.CheckSites.Update(cs);
-                context.SaveChanges();
+                count = context.SaveChanges();
             }
+            Console.WriteLine($"{cs.SiteName}更新件数：{count}");
 
             //通知
             if (updated)
