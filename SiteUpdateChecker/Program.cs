@@ -123,7 +123,7 @@ namespace SiteUpdateChecker
             using (var context = new ToolsContext(optionsBuilder.Options))
             {
                 context.CheckSites.Update(cs);
-                await context.SaveChangesAsync();
+                context.SaveChanges();
             }
 
             //通知
