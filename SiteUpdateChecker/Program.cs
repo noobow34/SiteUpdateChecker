@@ -12,10 +12,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Shuttle.Core.Cron;
 using System.Threading;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
-using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 
 namespace SiteUpdateChecker
 {
@@ -31,22 +27,6 @@ namespace SiteUpdateChecker
             {
                 pushWhenNoChange = args[0];
             }
-
-            IServiceCollection serviceCollection = new ServiceCollection();
-            serviceCollection.AddLogging(builder => builder
-            .AddConsole()
-            .AddFilter(level => level >= LogLevel.Information)
-            );
-            var loggerFactory = serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
-
-            var config = new ConfigurationBuilder().SetBasePath(System.AppDomain.CurrentDomain.BaseDirectory).AddJsonFile("appsettings.json").Build();
-            var connectionString = config.GetConnectionString("ToolsConnection");
-            optionsBuilder.UseLoggerFactory(loggerFactory).EnableSensitiveDataLogging().UseMySql(connectionString,
-                    mySqlOptions =>
-                    {
-                        mySqlOptions.ServerVersion(new Version(10, 3), ServerType.MariaDb);
-                    }
-            );
 
             List<CheckSite> csList;
             using (var context = new ToolsContext(optionsBuilder.Options))
@@ -140,15 +120,9 @@ namespace SiteUpdateChecker
                         LineUtil.PushMe($"【確認エラー】\n{cs.SiteName}\n{ex.Message}", httpClient);
                     }
                 }
-                else
-                {
-                    Console.WriteLine("Status304");
-                }
 
-                int count = 0;
                 Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(cs));
-                count = context.SaveChanges();
-                Console.WriteLine($"{cs.SiteName}更新件数：{count}");
+                _ = context.SaveChangesAsync();
 
                 //通知
                 if (updated)
