@@ -121,8 +121,7 @@ namespace SiteUpdateChecker
                     }
                 }
 
-                Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(cs));
-                _ = context.SaveChangesAsync();
+                await context.SaveChangesAsync();
 
                 //通知
                 if (updated)
