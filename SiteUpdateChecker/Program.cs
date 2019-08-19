@@ -121,8 +121,6 @@ namespace SiteUpdateChecker
                     }
                 }
 
-                await context.SaveChangesAsync();
-
                 //通知
                 if (updated)
                 {
@@ -135,6 +133,7 @@ namespace SiteUpdateChecker
                 {
                     LineUtil.PushMe($"【更新なし】\n{cs.SiteName}\n{cs.LastUpdate?.ToString("yyyy/MM/dd HH:mm:ss")}", httpClient);
                 }
+                await context.SaveChangesAsync();
             }
         }
     }
