@@ -20,38 +20,81 @@ namespace SiteUpdateChecker
 
         private static DbContextOptionsBuilder<ToolsContext> optionsBuilder = new DbContextOptionsBuilder<ToolsContext>();
         private static HttpClient httpClient = new HttpClient();
+        private static List<Task> tasks = null;
+        private static List<CancellationTokenSource> cancelTokens = null;
+        private static string pushWhenNoChange = "0";
         static void Main(string[] args)
         {
-            string pushWhenNoChange = "0";
             if (args != null && args.Length > 0)
             {
                 pushWhenNoChange = args[0];
             }
 
+            CreateTaskList();
+
+            Task.WaitAll(tasks.ToArray());
+        }
+
+        /// <summary>
+        /// タスクリストを作成して実行する
+        /// </summary>
+        private static void CreateTaskList()
+        {
+            //実行中のすべてのタスクをキャンセル
+            if(cancelTokens != null)
+            {
+                CancelAllTask();
+            }
+
+            //タスクリストとキャンセルトークンリストをクリア
+            tasks = new List<Task>();
+            cancelTokens = new List<CancellationTokenSource>();
+
+            //対象を全件取得
             List<CheckSite> csList;
             using (var context = new ToolsContext(optionsBuilder.Options))
             {
                 csList = context.CheckSites.AsNoTracking().ToList();
             }
 
-            var tasks = new List<Task>();
+            //タスク登録
             foreach (var cs in csList)
             {
-                tasks.Add(Task.Run(async () =>
-                {
-                    var c = new CronExpression(cs.Schedule);
-                    while (true)
-                    {
-                        var next = c.NextOccurrence();
-                        Console.WriteLine($"{cs.SiteName}:{next.ToString()}");
-                        var span = next - DateTime.Now;
-                        Thread.Sleep(Convert.ToInt32(span.TotalMilliseconds));
-                        await CheckTaskAsync(cs.SiteId, pushWhenNoChange);
-                    }
-                }));
+                var tokenSource = new CancellationTokenSource();
+                var cancelToken = tokenSource.Token;
+                tasks.Add(Task.Run(() => SleepAndCheckSite(cs, cancelToken)));
             }
+        }
 
-            Task.WaitAll(tasks.ToArray());
+        /// <summary>
+        /// すべてのタスクをキャンセルする
+        /// </summary>
+        private static void CancelAllTask()
+        {
+            foreach(var cancellationToken in cancelTokens)
+            {
+                cancellationToken.Cancel();
+            }
+        }
+
+        private static async void SleepAndCheckSite(CheckSite cs,CancellationToken cancelToken)
+        {
+            var c = new CronExpression(cs.Schedule);
+            while (true)
+            {
+                var next = c.NextOccurrence();
+                Console.WriteLine($"{cs.SiteName}:{next.ToString()}");
+                while (true)
+                {
+                    //1秒ごとにキャンセルされていないか・実行時刻が来ていないかチェック
+                    if (cancelToken.IsCancellationRequested || DateTime.Now >= next)
+                    {
+                        break;
+                    }
+                    Thread.Sleep(1000);
+                }
+                await CheckTaskAsync(cs.SiteId, pushWhenNoChange);
+            }
         }
 
         private static async System.Threading.Tasks.Task CheckTaskAsync(int id, string pushWhenNoChange)
