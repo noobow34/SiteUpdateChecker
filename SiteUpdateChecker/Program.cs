@@ -12,12 +12,13 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Shuttle.Core.Cron;
 using System.Threading;
+using Mono.Unix;
+using Mono.Unix.Native;
 
 namespace SiteUpdateChecker
 {
     class Program
     {
-
         private static DbContextOptionsBuilder<ToolsContext> optionsBuilder = new DbContextOptionsBuilder<ToolsContext>();
         private static HttpClient httpClient = new HttpClient();
         private static List<Task> tasks = null;
@@ -30,9 +31,26 @@ namespace SiteUpdateChecker
                 pushWhenNoChange = args[0];
             }
 
+            var sig1 = new UnixSignal(Signum.SIGUSR1);
+            var sig2 = new UnixSignal(Signum.SIGUSR2);
+
             CreateTaskList();
 
-            Task.WaitAll(tasks.ToArray());
+            int signalIndex = 0;
+            while( (signalIndex = UnixSignal.WaitAny(new UnixSignal[] {sig1,sig2})) != -1)
+            {
+                switch (signalIndex)
+                {
+                    case 1:
+                        //リセット
+                        Console.WriteLine("USR1受信。タスクを再読込。");
+                        CreateTaskList();
+                        break;
+                    case 2:
+                        break;
+                }
+            }
+
         }
 
         /// <summary>
