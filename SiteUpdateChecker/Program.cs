@@ -118,7 +118,7 @@ namespace SiteUpdateChecker
                     }
                     Thread.Sleep(10000);
                 }
-                await CheckTaskAsync(cs.SiteId, pushWhenNoChange);
+                await CheckTaskAsync(cs);
             }
         }
 
@@ -136,7 +136,7 @@ namespace SiteUpdateChecker
             //タスク登録
             foreach (var cs in csList)
             {
-                await CheckTaskAsync(cs.SiteId,pushWhenNoChange);
+                await CheckTaskAsync(cs);
             }
         }
 
@@ -146,87 +146,86 @@ namespace SiteUpdateChecker
         /// <param name="id"></param>
         /// <param name="pushWhenNoChange"></param>
         /// <returns></returns>
-        private static async System.Threading.Tasks.Task CheckTaskAsync(int id, string pushWhenNoChange)
+        private static async System.Threading.Tasks.Task CheckTaskAsync(CheckSite cs)
         {
-            CheckSite cs;
-            using(var context = new ToolsContext(optionsBuilder.Options))
+            bool updated = false;
+            var response = await httpClient.GetAsync(cs.Url, HttpCompletionOption.ResponseHeadersRead);
+            string identifier = null;
+            cs.LastCheck = DateTime.Now;
+
+            Console.WriteLine("-------------");
+            Console.WriteLine(cs.SiteName);
+
+            if (response.StatusCode != System.Net.HttpStatusCode.NotModified)
             {
-                cs = context.CheckSites.Where(c => c.SiteId == id).SingleOrDefault();
-
-                bool updated = false;
-                var response = await httpClient.GetAsync(cs.Url, HttpCompletionOption.ResponseHeadersRead);
-                string identifier = null;
-                cs.LastCheck = DateTime.Now;
-
-                Console.WriteLine("-------------");
-                Console.WriteLine(cs.SiteName);
-
-                if (response.StatusCode != System.Net.HttpStatusCode.NotModified)
+                try
                 {
-                    try
+                    //タイプごとにチェック
+                    switch (cs.CheckType)
                     {
-                        //タイプごとにチェック
-                        switch (cs.CheckType)
-                        {
-                            case CheckTypeEnum.ETag:
-                                Console.Write("ETag:");
-                                identifier = response.Headers.GetValues("ETag").ToArray()?[0];
-                                Console.WriteLine(identifier);
-                                Console.WriteLine($"前回値:{cs.CheckIdentifier}");
-                                if (identifier != cs.CheckIdentifier || cs.CheckIdentifier == null)
-                                {
-                                    updated = true;
-                                    cs.LastUpdate = DateTime.Now;
-                                }
-                                break;
+                        case CheckTypeEnum.ETag:
+                            Console.Write("ETag:");
+                            identifier = response.Headers.GetValues("ETag").ToArray()?[0];
+                            Console.WriteLine(identifier);
+                            Console.WriteLine($"前回値:{cs.CheckIdentifier}");
+                            if (identifier != cs.CheckIdentifier || cs.CheckIdentifier == null)
+                            {
+                                updated = true;
+                                cs.LastUpdate = DateTime.Now;
+                            }
+                            break;
 
-                            case CheckTypeEnum.LastModified:
-                                Console.Write("Last-Modified:");
-                                Console.WriteLine(response.Content.Headers.LastModified?.LocalDateTime.ToString("yyyy/MM/dd HH:mm:ss"));
-                                Console.WriteLine($"前回値:{cs.LastUpdate?.ToString("yyyy/MM/dd HH:mm:ss")}");
-                                if (cs.LastUpdate != response.Content.Headers.LastModified || cs.LastUpdate == null)
-                                {
-                                    updated = true;
-                                    cs.LastUpdate = response.Content.Headers.LastModified?.LocalDateTime;
-                                }
-                                break;
+                        case CheckTypeEnum.LastModified:
+                            Console.Write("Last-Modified:");
+                            Console.WriteLine(response.Content.Headers.LastModified?.LocalDateTime.ToString("yyyy/MM/dd HH:mm:ss"));
+                            Console.WriteLine($"前回値:{cs.LastUpdate?.ToString("yyyy/MM/dd HH:mm:ss")}");
+                            if (cs.LastUpdate != response.Content.Headers.LastModified || cs.LastUpdate == null)
+                            {
+                                updated = true;
+                                cs.LastUpdate = response.Content.Headers.LastModified?.LocalDateTime;
+                            }
+                            break;
 
-                            case CheckTypeEnum.HtmlHash:
-                                string html = await response.Content.ReadAsStringAsync();
-                                byte[] bytes = new UTF8Encoding().GetBytes(html);
-                                uint crc32 = Crc32CAlgorithm.Compute(bytes);
-                                identifier = Convert.ToString(crc32, 16);
-                                Console.Write("HtmlHash:");
-                                Console.WriteLine(identifier);
-                                Console.WriteLine($"前回値:{cs.CheckIdentifier}");
-                                if (identifier != cs.CheckIdentifier || cs.CheckIdentifier == null)
-                                {
-                                    updated = true;
-                                    cs.LastUpdate = DateTime.Now;
-                                }
-                                break;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        LineUtil.PushMe($"【確認エラー】\n{cs.SiteName}\n{ex.Message}", httpClient);
+                        case CheckTypeEnum.HtmlHash:
+                            string html = await response.Content.ReadAsStringAsync();
+                            byte[] bytes = new UTF8Encoding().GetBytes(html);
+                            uint crc32 = Crc32CAlgorithm.Compute(bytes);
+                            identifier = Convert.ToString(crc32, 16);
+                            Console.Write("HtmlHash:");
+                            Console.WriteLine(identifier);
+                            Console.WriteLine($"前回値:{cs.CheckIdentifier}");
+                            if (identifier != cs.CheckIdentifier || cs.CheckIdentifier == null)
+                            {
+                                updated = true;
+                                cs.LastUpdate = DateTime.Now;
+                            }
+                            break;
                     }
                 }
-
-                //通知
-                if (updated)
+                catch (Exception ex)
                 {
-                    cs.CheckIdentifier = identifier;
-                    Console.WriteLine("通知実施");
-                    string notifyString = $"【更新通知】\n{cs.SiteName}\n{cs.LastUpdate?.ToString("yyyy/MM/dd HH:mm:ss")}\n{cs.Url}";
-                    LineUtil.PushMe(notifyString, httpClient);
+                    LineUtil.PushMe($"【確認エラー】\n{cs.SiteName}\n{ex.Message}", httpClient);
                 }
-                else if (pushWhenNoChange == "1")
-                {
-                    LineUtil.PushMe($"【更新なし】\n{cs.SiteName}\n{cs.LastUpdate?.ToString("yyyy/MM/dd HH:mm:ss")}", httpClient);
-                }
-                await context.SaveChangesAsync();
             }
+
+            //通知
+            if (updated)
+            {
+                cs.CheckIdentifier = identifier;
+                Console.WriteLine("通知実施");
+                string notifyString = $"【更新通知】\n{cs.SiteName}\n{cs.LastUpdate?.ToString("yyyy/MM/dd HH:mm:ss")}\n{cs.Url}";
+                LineUtil.PushMe(notifyString, httpClient);
+            }
+            else if (pushWhenNoChange == "1")
+            {
+                LineUtil.PushMe($"【更新なし】\n{cs.SiteName}\n{cs.LastUpdate?.ToString("yyyy/MM/dd HH:mm:ss")}", httpClient);
+            }
+
+            using (var context = new ToolsContext(optionsBuilder.Options))
+            {
+                context.CheckSites.Update(cs);
+            }
+
         }
     }
 }
