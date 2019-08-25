@@ -111,12 +111,12 @@ namespace SiteUpdateChecker
                 Console.WriteLine($"{cs.SiteName}:{next.ToString()}");
                 while (true)
                 {
-                    //1秒ごとにキャンセルされていないか・実行時刻が来ていないかチェック
+                    //30秒ごとにキャンセルされていないか・実行時刻が来ていないかチェック
                     if (cancelToken.IsCancellationRequested || DateTime.Now >= next)
                     {
                         break;
                     }
-                    Thread.Sleep(10000);
+                    Thread.Sleep(30_000);
                 }
                 await CheckTaskAsync(cs.SiteId, pushWhenNoChange);
             }
