@@ -43,10 +43,12 @@ namespace SiteUpdateChecker
                 {
                     case 0:
                         //リセット
-                        Console.WriteLine("USR1受信。タスクを再読込。");
+                        Console.WriteLine("-----------USR1受信:タスクを再読込-----------");
                         CreateTaskList();
                         break;
                     case 1:
+                        Console.WriteLine("-----------USR2受信:全タスクを実行-----------");
+                        CheckAllSite();
                         break;
                 }
             }
@@ -95,6 +97,11 @@ namespace SiteUpdateChecker
             }
         }
 
+        /// <summary>
+        /// スケジュール時間まで待機してチェックを実行
+        /// </summary>
+        /// <param name="cs"></param>
+        /// <param name="cancelToken"></param>
         private static async void SleepAndCheckSite(CheckSite cs,CancellationToken cancelToken)
         {
             var c = new CronExpression(cs.Schedule);
@@ -109,12 +116,36 @@ namespace SiteUpdateChecker
                     {
                         break;
                     }
-                    Thread.Sleep(1000);
+                    Thread.Sleep(10000);
                 }
                 await CheckTaskAsync(cs.SiteId, pushWhenNoChange);
             }
         }
 
+        /// <summary>
+        /// 全サイトのチェックを実行
+        /// </summary>
+        private static async void CheckAllSite()
+        {
+            List<CheckSite> csList;
+            using (var context = new ToolsContext(optionsBuilder.Options))
+            {
+                csList = context.CheckSites.AsNoTracking().ToList();
+            }
+
+            //タスク登録
+            foreach (var cs in csList)
+            {
+                await CheckTaskAsync(cs.SiteId,pushWhenNoChange);
+            }
+        }
+
+        /// <summary>
+        /// チェックを実行
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="pushWhenNoChange"></param>
+        /// <returns></returns>
         private static async System.Threading.Tasks.Task CheckTaskAsync(int id, string pushWhenNoChange)
         {
             CheckSite cs;
