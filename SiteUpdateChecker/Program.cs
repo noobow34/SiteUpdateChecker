@@ -41,12 +41,12 @@ namespace SiteUpdateChecker
             {
                 switch (signalIndex)
                 {
-                    case 1:
+                    case 0:
                         //リセット
                         Console.WriteLine("USR1受信。タスクを再読込。");
                         CreateTaskList();
                         break;
-                    case 2:
+                    case 1:
                         break;
                 }
             }
