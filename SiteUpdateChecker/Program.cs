@@ -14,6 +14,8 @@ using Shuttle.Core.Cron;
 using System.Threading;
 using Mono.Unix;
 using Mono.Unix.Native;
+using Noobow.Commons.Constants;
+using EnumStringValues;
 
 namespace SiteUpdateChecker
 {
@@ -209,7 +211,7 @@ namespace SiteUpdateChecker
                     }
                     catch (Exception ex)
                     {
-                        LineUtil.PushMe($"【確認エラー】\n{cs.SiteName}\n{ex.Message}", httpClient);
+                        await SlackUtil.PostAsync(SlackChannelEnum.SiteUpdate.GetStringValue(), $"【確認エラー】\n{cs.SiteName}\n{ex.Message}");
                     }
                 }
 
@@ -219,11 +221,11 @@ namespace SiteUpdateChecker
                     cs.CheckIdentifier = identifier;
                     Console.WriteLine("通知実施");
                     string notifyString = $"【更新通知】\n{cs.SiteName}\n{cs.LastUpdate?.ToString("yyyy/MM/dd HH:mm:ss")}\n{cs.Url}";
-                    LineUtil.PushMe(notifyString, httpClient);
+                    await SlackUtil.PostAsync(SlackChannelEnum.SiteUpdate.GetStringValue(), notifyString);
                 }
                 else if (pushWhenNoChange == "1")
                 {
-                    LineUtil.PushMe($"【更新なし】\n{cs.SiteName}\n{cs.LastUpdate?.ToString("yyyy/MM/dd HH:mm:ss")}", httpClient);
+                    await SlackUtil.PostAsync(SlackChannelEnum.SiteUpdate.GetStringValue(), $"【更新なし】\n{cs.SiteName}\n{cs.LastUpdate?.ToString("yyyy/MM/dd HH:mm:ss")}");
                 }
                 await context.SaveChangesAsync();
             }
