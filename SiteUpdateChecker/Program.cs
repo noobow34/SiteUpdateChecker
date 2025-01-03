@@ -220,7 +220,7 @@ namespace SiteUpdateChecker
                 {
                     cs.CheckIdentifier = identifier;
                     Console.WriteLine("通知実施");
-                    string notifyString = $"【更新通知】\n{cs.SiteName}\n{cs.LastUpdate?.ToString("yyyy/MM/dd HH:mm:ss")}\n{cs.Url}";
+                    string notifyString = $"【更新通知】\n{cs.SiteName}\n{cs.LastUpdate?.ToString("yyyy/MM/dd HH:mm:ss")}\n<{cs.Url}|リンク>";
                     await SlackUtil.PostAsync(SlackChannelEnum.SiteUpdate.GetStringValue(), notifyString);
                 }
                 else if (pushWhenNoChange == "1")
